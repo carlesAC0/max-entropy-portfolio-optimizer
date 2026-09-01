@@ -30,12 +30,24 @@ carteras cuasi-eficientes (QEP)**, con el óptimo (`MEP_optim`) y el MVO marcado
 
 ## Cómo funciona (resumen)
 
-Sobre la frontera media-varianza (MVO) se barre una rejilla de tolerancias para formar una
-**superficie de carteras cuasi-eficientes (QEP)**; su **frente de Pareto** (diversificación
-· Sharpe · concentración) selecciona la cartera de **máxima diversificación dentro de una
-banda de eficiencia**. La diversificación se mide con la **entropía cuadrática de Rao**. La
-solución se estabiliza por **resampling** (Stationary Block Bootstrap) y se valida
-**fuera de muestra** (walk-forward).
+- **Punto de partida.** La optimización media-varianza (MVO) es inestable: la covarianza
+  suele estar mal condicionada y la solución es muy sensible al error de estimación, hasta
+  el punto de que fuera de muestra la cartera 1/N la bate a menudo (DeMiguel et al. 2009).
+- **Objetivo de diversificación.** En lugar del máximo Sharpe, se maximiza la **entropía
+  cuadrática de Rao** `H_D(w) = ½·wᵀ·D̃·w`, donde `D̃` es una distancia entre activos en dos
+  pasos (Gower + «distancia de distancias» de López de Prado): mide la similitud de cada
+  activo con **todo** el universo, no solo por pares.
+- **Selección (QEP + Pareto).** Se barre una rejilla de tolerancias, una **banda de Sharpe
+  δS** (calibrada por el error del Sharpe, Lo 2002) y un **cap de contribución al riesgo**
+  por activo, generando una **superficie de carteras cuasi-eficientes (QEP)**. Su **frente
+  de Pareto** (diversificación · Sharpe · concentración) fija la de **máxima diversificación
+  dentro de la banda**.
+- **Estabilidad.** Un **Stationary Block Bootstrap** (Politis & Romano 1994) preserva
+  autocorrelación y colas gruesas de las series y agrega la solución por mediana de pesos
+  con intervalos de confianza.
+- **Validación.** *Walk-forward* fuera de muestra y contrastes de robustez: Jobson-Korkie /
+  Memmel (igualdad de Sharpe), PSR y DSR (Bailey & López de Prado) frente a muestra corta,
+  no-normalidad y sesgo de selección.
 
 ## Resultado
 
