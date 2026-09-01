@@ -6,7 +6,8 @@ combinada con el resampling de Michaud para ganar estabilidad. Incluye una **apl
 interactiva** (Flask + Plotly) conectada a Interactive Brokers, con validación
 *walk-forward* fuera de muestra.
 
-Implementación del modelo del **Máster en Finanzas Cuantitativas (MFIA)**, que extiende a un
+Implementación del modelo del **Máster en Mercados Financieros e Inversiones Alternativas
+(MFIA) de BME**, que extiende a un
 universo multiactivo el marco de máxima entropía de **Bajo Traver (2025, _Journal of Asset
 Management_)**. Metodología y resultados completos, en el paper; este repositorio es el
 software (motor + aplicación).
