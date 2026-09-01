@@ -65,13 +65,18 @@ Diseño **por capas con dependencias unidireccionales**: la lógica científica 
 separada de los datos y la presentación, y tanto la app como la ejecución por lotes invocan
 el mismo pipeline (una única fuente de verdad, resultados reproducibles).
 
+Cada capa **solo depende de la inferior**. La flecha se lee «llama a / depende de»: la
+presentación llama a la web, la web al adaptador, y el adaptador al motor de cálculo.
+
 ```mermaid
 flowchart TD
-    UI["Presentación · dashboard web<br/>HTML · Plotly · Chart.js<br/><i>templates/dashboard_app.html</i>"]
-    WEB["Web · servidor Flask (API REST)<br/><i>app.py</i>"]
-    AD["Adaptador + Capa de datos<br/>universo · cache · IBKR · XLS<br/><i>engine_api.py · data_cache.py</i>"]
-    ENG["Motor de cálculo · funciones puras<br/>MVO · QEP/Pareto · entropía · bootstrap · OOS<br/><i>mvo_resampling_mep.py</i>"]
-    UI --> WEB --> AD --> ENG
+    UI["1 · Presentación — dashboard web (navegador)<br/>HTML · Plotly · Chart.js<br/>templates/dashboard_app.html"]
+    WEB["2 · Web — servidor Flask (API REST)<br/>app.py"]
+    AD["3 · Adaptador + Capa de datos<br/>universo · cache · IBKR · XLS<br/>engine_api.py · data_cache.py"]
+    ENG["4 · Motor de cálculo — funciones puras<br/>MVO · QEP/Pareto · entropía · bootstrap · OOS<br/>mvo_resampling_mep.py"]
+    UI -->|"peticiones REST / JSON"| WEB
+    WEB -->|"invoca run_optimization()"| AD
+    AD -->|"ejecuta el pipeline"| ENG
 ```
 
 | Módulo | Rol |
