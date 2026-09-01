@@ -1,0 +1,37 @@
+# Datos cacheados (se regeneran desde IBKR)
+cache/
+
+# Informes exportados desde la app (PDF + HTML por cartera probada)
+informes/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.ipynb_checkpoints/
+
+# Entorno
+.venv/
+venv/
+.env
+
+# Sistema / IDE
+.claude/
+.DS_Store
+Thumbs.db
+
+# Notas de trabajo locales (contienen configuración privada, p.ej. cuenta IBKR)
+# Se mantienen en el equipo para ejecución local pero NO se publican.
+CLAUDE.md
+
+# Documentos del TFM (no forman parte del código)
+*.docx
+
+# Scripts auxiliares no publicados:
+#  - montecarlo/stress_test contienen la cartera real (datos personales)
+#  - generar_* son generadores de los documentos del TFM, no del producto
+# Se mantienen en local para ejecución, pero no se publican.
+montecarlo_carteras.py
+stress_test_carteras.py
+generar_funcional.py
+generar_informe.py

@@ -1,0 +1,7 @@
+flask>=3.0
+ib_insync>=0.9.86
+numpy
+scipy
+pandas
+matplotlib
+openpyxl

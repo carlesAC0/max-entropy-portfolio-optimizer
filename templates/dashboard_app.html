@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Motor MEP·RQE — Dashboard interactivo</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'IBM Plex Mono',ui-monospace,monospace;background:#0d1117;color:#e6edf3;min-height:100vh}
+header{background:#161b22;border-bottom:2px solid #e8503a;padding:16px 28px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+.logo{font-size:18px;font-weight:700;letter-spacing:1px}.logo span{color:#e8503a}
+.meta{font-size:11px;color:#8b949e}
+/* ── Barra de control ───────────────────────────────────────────── */
+.control{background:#10151c;border-bottom:1px solid #30363d;padding:14px 28px}
+.ctrl-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.ctrl-row+.ctrl-row{margin-top:10px}
+.ctrl-label{font-size:10px;color:#8b949e;letter-spacing:1px;text-transform:uppercase;margin-right:4px}
+.chip{padding:5px 11px;font-size:11px;border:1px solid #30363d;border-radius:14px;cursor:pointer;background:transparent;color:#8b949e;font-family:inherit;transition:all .15s;user-select:none}
+.chip:hover{border-color:#6e7681;color:#e6edf3}
+.chip.active{background:rgba(232,80,58,0.16);border-color:#e8503a;color:#fff}
+.chip.sat{border-style:dashed}
+.chip.ext{border-style:dotted;border-color:#3ab0a0}
+.chip.ext.active{background:rgba(58,176,160,0.16);border-color:#3ab0a0;color:#fff}
+.chip .x{margin-left:6px;color:#6e7681;font-weight:700}
+.chip .x:hover{color:#e8503a}
+.btn{padding:7px 15px;font-size:12px;border:1px solid #30363d;border-radius:6px;cursor:pointer;background:#161b22;color:#e6edf3;font-family:inherit;letter-spacing:.5px;transition:all .15s}
+.btn:hover{border-color:#6e7681}
+.btn-primary{background:#e8503a;border-color:#e8503a;color:#fff;font-weight:700}
+.btn-primary:hover{background:#f26a55}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.numin{width:70px;padding:6px 8px;font-size:12px;background:#0d1117;border:1px solid #30363d;border-radius:6px;color:#e6edf3;font-family:inherit}
+.badge{font-size:10px;padding:3px 9px;border-radius:10px;letter-spacing:.5px}
+.badge-ok{background:rgba(124,179,66,0.15);color:#7cb342}
+.badge-stale{background:rgba(217,139,43,0.15);color:#d98b2b}
+.badge-none{background:rgba(110,118,129,0.15);color:#8b949e}
+/* ── Tabs / vistas (idéntico al dashboard original) ─────────────── */
+.tabs{display:flex;border-bottom:1px solid #30363d;padding:0 28px;background:#161b22}
+.tab{padding:10px 20px;font-size:12px;cursor:pointer;border:none;background:transparent;color:#8b949e;font-family:inherit;border-bottom:2px solid transparent;transition:all .2s;letter-spacing:.5px}
+.tab.active{color:#e6edf3;border-bottom-color:#e8503a}.tab:hover{color:#e6edf3}
+.view{display:none;padding:24px 28px}.view.active{display:block}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.kpi{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:14px 16px}
+.kpi-label{font-size:10px;color:#8b949e;letter-spacing:1px;margin-bottom:4px}
+.kpi-val{font-size:22px;font-weight:600}.kpi-sub{font-size:11px;color:#6e7681;margin-top:2px}
+.pos{color:#7cb342}.neg{color:#e8503a}.neu{color:#d98b2b}
+.card{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:16px;margin-bottom:16px}
+.card-title{font-size:11px;color:#8b949e;letter-spacing:1px;text-transform:uppercase;margin-bottom:12px}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{font-size:10px;color:#8b949e;padding:6px 8px;border-bottom:1px solid #30363d;text-align:right;white-space:nowrap}
+th:first-child{text-align:left}
+td{padding:5px 8px;text-align:right;border-bottom:1px solid #21262d;color:#e6edf3}
+td:first-child{text-align:left;color:#8b949e}
+.pt-selector{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+.pt-btn{padding:4px 10px;font-size:11px;border:1px solid #30363d;border-radius:4px;cursor:pointer;background:transparent;color:#8b949e;font-family:inherit;transition:all .2s}
+.pt-btn.active{background:#e8503a;color:#fff;border-color:#e8503a}
+.oos-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
+.oos-card{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:12px 16px}
+.oos-label{font-size:10px;color:#8b949e;letter-spacing:1px;margin-bottom:6px}
+.oos-row{display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px}
+.jk-box{background:#10151c;border:1px solid #21262d;border-radius:6px;padding:12px 16px;font-size:12px;line-height:1.8;margin-top:12px}
+.jk-box strong{color:#d98b2b}
+.comp-summary{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px}
+.cs-card{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:12px 14px}
+.cs-label{font-size:10px;color:#8b949e;letter-spacing:1px;margin-bottom:4px}
+.cs-val{font-size:18px;font-weight:600}
+.afila{display:flex;align-items:center;gap:14px;padding:11px 4px;border-bottom:1px solid #21262d}
+.afila:last-child{border-bottom:none}
+.adot{width:10px;height:34px;border-radius:3px;flex-shrink:0}
+.aname{width:70px;flex-shrink:0}
+.atkr{font-size:13px;font-weight:600;color:#e6edf3}
+.aclass{font-size:9px;color:#6e7681;letter-spacing:.5px}
+.abar-wrap{flex:1;min-width:0}
+.abar-track{position:relative;height:22px;background:#0d1117;border-radius:4px;overflow:hidden}
+.abar-fill{position:absolute;top:0;left:0;height:100%;border-radius:4px;opacity:0.88;transition:width .4s}
+.abar-ic{position:absolute;top:0;height:100%;background:rgba(139,148,158,0.18);border-left:1px dashed #6e7681;border-right:1px dashed #6e7681}
+.aweight{width:64px;text-align:right;flex-shrink:0}
+.aw-big{font-size:17px;font-weight:700;color:#e6edf3}
+.aw-ic{font-size:9px;color:#6e7681}
+.arc{width:80px;text-align:right;flex-shrink:0;font-size:12px}
+.arc-val{font-weight:600}
+.arc-lbl{font-size:9px;color:#6e7681}
+.aestab{width:92px;text-align:right;flex-shrink:0}
+.semaforo{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:600;padding:3px 9px;border-radius:12px}
+.sem-r{background:rgba(124,179,66,0.15);color:#7cb342}
+.sem-m{background:rgba(217,139,43,0.15);color:#d98b2b}
+.sem-i{background:rgba(232,80,58,0.15);color:#e8503a}
+.sem-dot{width:6px;height:6px;border-radius:50%}
+/* ── Welcome / overlay / modal ──────────────────────────────────── */
+#welcome{padding:60px 28px;text-align:center;color:#8b949e}
+#welcome .big{font-size:20px;color:#e6edf3;margin-bottom:10px}
+#overlay{position:fixed;inset:0;background:rgba(13,17,23,0.86);display:none;align-items:center;justify-content:center;z-index:50;flex-direction:column;gap:18px}
+#overlay.show{display:flex}
+.spinner{width:46px;height:46px;border:4px solid #30363d;border-top-color:#e8503a;border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#overlay .txt{font-size:13px;color:#e6edf3}#overlay .sub{font-size:11px;color:#8b949e}
+.modal{position:fixed;inset:0;background:rgba(13,17,23,0.8);display:none;align-items:center;justify-content:center;z-index:60}
+.modal.show{display:flex}
+.modal-box{background:#161b22;border:1px solid #30363d;border-radius:10px;padding:22px;width:520px;max-width:92vw}
+.modal-box h3{font-size:14px;margin-bottom:14px;color:#e6edf3}
+.modal-box .row{display:flex;gap:8px;margin-bottom:12px}
+.modal-box input{flex:1;padding:8px 10px;font-size:12px;background:#0d1117;border:1px solid #30363d;border-radius:6px;color:#e6edf3;font-family:inherit}
+.sres{max-height:260px;overflow:auto;margin-bottom:12px}
+.sres-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px;border-bottom:1px solid #21262d;font-size:11px}
+.sres-row .nm{color:#8b949e}
+.toast{position:fixed;bottom:20px;right:20px;background:#161b22;border:1px solid #30363d;border-left:3px solid #e8503a;border-radius:6px;padding:12px 16px;font-size:12px;z-index:70;max-width:420px;display:none}
+.toast.show{display:block}.toast.ok{border-left-color:#7cb342}
+/* ── Modo impresión (export PDF): todas las pestañas en cascada ──── */
+body.print .control,body.print .tabs,body.print #toast,body.print #overlay,body.print #modal,body.print .pt-selector{display:none!important}
+body.print .view{display:block!important;padding:24px 8px}
+body.print #dash .view{break-before:page}
+body.print #dash #v-is{break-before:auto}
+body.print .view::before{content:attr(data-title);display:block;font-size:13px;font-weight:700;color:#e8503a;letter-spacing:2px;border-bottom:1px solid #30363d;padding-bottom:6px;margin-bottom:16px}
+body.print .card,body.print .kpi,body.print .oos-card,body.print .cs-card,body.print .jk-box{break-inside:avoid}
+body.print #cOOS-wrap,body.print #cDD-wrap{min-width:0!important}
+@media print{
+  body{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+@page{size:A4 landscape;margin:8mm}
+</style>
+</head>
+<body>
+<header>
+  <div><div class="logo">MVO + RESAMPLING + <span>MEP·RQE</span></div>
+  <div class="meta">Dashboard interactivo · Bajo Traver (2025) · Michaud (1998) · Lo (2002) · Rao (1982)</div></div>
+  <div class="meta" id="hdr-meta" style="text-align:right">—</div>
+</header>
+
+<div class="control">
+  <div class="ctrl-row">
+    <span class="ctrl-label">Activos</span>
+    <span id="chips-core"></span>
+    <span id="chips-sat"></span>
+    <span id="chips-ext"></span>
+    <button class="chip" style="border-style:dashed;color:#7cb342" onclick="openModal()">+ añadir</button>
+    <button class="chip" style="border-style:dotted;color:#3ab0a0" onclick="document.getElementById('xlsfile').click()" title="Carga un XLS/CSV: 1ª columna fechas, una columna por fondo (retornos o VL, diario o mensual)">📁 cargar XLS</button>
+    <input type="file" id="xlsfile" accept=".csv,.xlsx,.xls" style="display:none" onchange="uploadXls(this)">
+  </div>
+  <div class="ctrl-row">
+    <span class="ctrl-label">N_sim</span>
+    <input id="nsim" class="numin" type="number" min="50" step="50" placeholder="1000">
+    <span class="ctrl-label" title="Cap de PESO por activo (Jagannathan & Ma 2003). Vacío = valor de CONFIG (20). 100 = SIN límite de peso (ablation): el MVO máx-Sharpe se concentra libremente y la diversificación del MEP es mérito exclusivo de la entropía (RQE).">w_max %</span>
+    <input id="wmax" class="numin" type="number" min="5" max="100" step="5" placeholder="20" style="width:56px" title="Vacío = 20. Pon 100 para correr SIN límite de peso (ablation).">
+    <button class="btn btn-primary" id="btn-run" onclick="optimize()">EJECUTAR ▶</button>
+    <button class="btn" id="btn-refresh" onclick="refresh()">↻ Refrescar IBKR</button>
+    <button class="btn" id="btn-pdf" onclick="exportPdf()" title="Guarda PDF + HTML del resultado actual en la carpeta informes/">⬇ Exportar PDF</button>
+    <span style="flex:1"></span>
+    <span class="ctrl-label">Datos</span>
+    <span id="cache-badge" class="badge badge-none">—</span>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="showTab('is',this)">Frontera IS</button>
+  <button class="tab" onclick="showTab('comp',this)">Composición</button>
+  <button class="tab" onclick="showTab('oos',this)">Walk-Forward OOS</button>
+  <button class="tab" onclick="showTab('stats',this)">Estadísticos</button>
+</div>
+
+<div id="welcome">
+  <div class="big">Selecciona los activos y pulsa <b style="color:#e8503a">EJECUTAR ▶</b></div>
+  <div>El núcleo (8 activos estructurales) viene marcado por defecto. Puedes añadir/quitar tickers y lanzar la optimización completa (MVO → Resampling → MEP·RQE + Walk-Forward OOS).</div>
+</div>
+
+<div id="dash" style="display:none">
+<div id="v-is" class="view active" data-title="FRONTERA IS — SUPERFICIE QEP + FRENTE DE PARETO">
+  <div id="is-meta" style="margin-bottom:14px;padding:10px 14px;background:#161b22;border:1px solid #30363d;border-radius:8px;font-size:12px;color:#8b949e"></div>
+  <div class="card"><div class="card-title">Frente de Pareto 3D — Sharpe × concentración × diversificación (RQE) · ★ MEP_optim · ◆ MVO</div>
+    <div id="p3d-pareto" style="height:460px"></div></div>
+  <div class="card"><div class="card-title" id="surf-title">Superficie de soluciones QEP — RQE sobre las tolerancias (δS × cap RC) · ★ óptimo (δS*, rc*)</div>
+    <div id="p3d-surface" style="height:420px"></div></div>
+  <div class="card"><div class="card-title">MEP_optim (cartera final)</div>
+    <table><thead><tr><th>Cartera</th><th>Vol%</th><th>Ret%</th><th>Sharpe</th><th>RQE</th><th>DR</th><th>ΔSharpe vs MVO</th><th>FB%</th><th>δS*</th></tr></thead>
+    <tbody id="tb-frontera"></tbody></table></div>
+</div>
+<div id="v-comp" class="view" data-title="COMPOSICIÓN DE LA CARTERA">
+  <div class="pt-selector" id="pt-sel"></div>
+  <div class="comp-summary" id="comp-summary"></div>
+  <div class="card"><div class="card-title">Composición de la cartera — ficha por activo</div>
+    <div id="comp-cards"></div>
+  </div>
+  <div class="card" id="card-mvo" style="display:none"><div class="card-title">Composición MVO de referencia (máx. Sharpe) — comparativa</div>
+    <div id="comp-mvo"></div>
+  </div>
+  <div class="card"><div class="card-title">Distribución del riesgo (%RC)</div>
+    <div style="position:relative;height:260px"><canvas id="cRC"></canvas></div></div>
+</div>
+<div id="v-oos" class="view" data-title="WALK-FORWARD OOS"><div id="oos-content"></div></div>
+<div id="v-stats" class="view" data-title="ESTADÍSTICOS Y PARÁMETROS">
+  <div class="card"><div class="card-title">Métricas — MEP_optim (IS) y validación OOS</div>
+    <div style="overflow-x:auto"><table><thead><tr>
+      <th>Fuente</th><th>Ret%</th><th>Vol%</th><th>Sharpe</th><th>RQE</th><th>MDD%</th>
+    </tr></thead><tbody id="tb-stats"></tbody></table></div></div>
+  <div class="card"><div class="card-title">Parámetros del modelo</div>
+    <table id="tb-params"></table></div>
+  <div class="card"><div class="card-title">Robustez estadística — PSR / DSR (Bailey &amp; López de Prado, 2014)</div>
+    <div id="dsr-kpis" class="oos-kpis" style="grid-template-columns:repeat(2,1fr)"></div>
+    <div id="dsr-detail" style="overflow-x:auto"></div>
+    <div class="meta" id="dsr-note" style="margin-top:10px;color:#8b949e"></div>
+  </div>
+  <div class="card"><div class="card-title">Robustez del DSR frente al nº de búsquedas (N) — Exhibit 2 de López de Prado (2014)</div>
+    <div id="dsr-charts">
+      <div style="font-size:11px;color:#8b949e;margin:2px 0 4px">DSR — confianza tras deflactar por N candidatas (umbral 0,95) · se mantiene alta = robusto</div>
+      <div style="position:relative;height:220px"><canvas id="cDSR1"></canvas></div>
+    </div>
+    <div class="meta" style="margin-top:8px;color:#8b949e">Fijado el Sharpe IS del MEP y la dispersión de la rejilla, se barre N (nº de carteras candidatas). Al crecer N sube el umbral por azar y baja el DSR. La línea vertical marca <b>nuestro N real</b>; la horizontal, el 0,95. Cuanto más a la derecha cruzaría el 0,95, más búsqueda toleraría el resultado sin dejar de ser significativo.</div>
+  </div>
+</div>
+</div>
+
+<div id="overlay"><div class="spinner"></div><div class="txt" id="ov-txt">Procesando…</div><div class="sub" id="ov-sub"></div></div>
+
+<div id="modal" class="modal">
+  <div class="modal-box">
+    <h3>Añadir ticker desde IBKR</h3>
+    <div class="row">
+      <input id="searchq" placeholder="Símbolo o nombre (p.ej. SXR8, iShares Core S&amp;P 500)" onkeydown="if(event.key==='Enter')doSearch()">
+      <button class="btn" onclick="doSearch()">Buscar</button>
+    </div>
+    <div class="sres" id="searchres"><div class="meta">Requiere TWS abierto (puerto del modelo).</div></div>
+    <div style="text-align:right"><button class="btn" onclick="closeModal()">Cerrar</button></div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<!--PRINT_PAYLOAD-->
+<!-- Librerías al final del body: la página pinta antes de cargarlas (no bloquea) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.27.0/plotly.min.js"></script>
+
+<script>
+let FD=[],OOS={},ASSETS=[],SURF=[],MVOREF={},META={},DSRB={};
+let UNIV={},STATE=null,currentTab='is',selPt=0;
+let cFront=null,cRQE=null,cOOS=null,cComp=null,cRC=null,cDD=null,cDSR1=null;
+const COLORS=['#e8503a','#7cb342','#1f6feb','#d98b2b','#a371f7','#3ab0a0','#f78166','#79c0ff','#56d364','#e3b341','#ff7b72','#bc8cff'];
+const fmt=(v,d=2)=>v==null?'—':v.toFixed(d);
+const fmtP=v=>(v>=0?'+':'')+fmt(v)+'%';
+// interpolación de color para las superficies QEP
+function _mix(a,b,t){t=Math.max(0,Math.min(1,t));return `rgb(${Math.round(a[0]+(b[0]-a[0])*t)},${Math.round(a[1]+(b[1]-a[1])*t)},${Math.round(a[2]+(b[2]-a[2])*t)})`;}
+const heat =(v,lo,hi)=>_mix([124,179,66],[232,80,58],(v-lo)/(hi-lo||1));   // concentración: verde→rojo
+const heat2=(v,lo,hi)=>_mix([68,1,84],[253,231,37],(v-lo)/(hi-lo||1));     // RQE: púrpura→amarillo
+
+function toast(msg,ok){const t=document.getElementById('toast');t.textContent=msg;t.className='toast show'+(ok?' ok':'');clearTimeout(t._h);t._h=setTimeout(()=>t.className='toast',7000);}
+function overlay(on,txt,sub){document.getElementById('overlay').className=on?'show':'';if(txt)document.getElementById('ov-txt').textContent=txt;document.getElementById('ov-sub').textContent=sub||'';}
+
+/* ── Estado / panel de control ─────────────────────────────────── */
+async function loadState(){
+  const r=await fetch('/api/state');STATE=await r.json();UNIV=STATE.universe;
+  document.getElementById('nsim').placeholder=STATE.config.N_sim;
+  if(STATE.config.w_max!=null)document.getElementById('wmax').placeholder=Math.round(STATE.config.w_max*100);
+  document.getElementById('hdr-meta').innerHTML=
+    'N_sim='+STATE.config.N_sim+' · K='+STATE.config.K+' · block='+STATE.config.block_size+'m<br>'+
+    'w_max='+(STATE.config.w_max*100).toFixed(0)+'% · %RC k='+STATE.config.rc_k+' · IBKR '+STATE.config.ibkr_port;
+  renderChips();renderCacheBadge();
+  await loadLast();
+}
+async function loadLast(){
+  try{
+    const lr=await (await fetch('/api/last')).json();
+    if(lr && lr.frontier && lr.frontier.length){
+      FD=lr.frontier; OOS=lr.oos||{}; ASSETS=lr.assets;
+      SURF=lr.surface||[]; MVOREF=lr.mvo_ref||{}; META=lr.meta||{}; DSRB=lr.dsr||{};
+      selPt=FD.findIndex(p=>p.max_sr); if(selPt<0)selPt=0;
+      if(lr.tickers){document.querySelectorAll('.chip').forEach(c=>{if(c.dataset.t)c.classList.toggle('active', lr.tickers.includes(c.dataset.t));});}
+      document.getElementById('welcome').style.display='none';
+      document.getElementById('dash').style.display='block';
+      renderAll();
+      toast('Mostrando último cálculo'+(lr.ts?' · '+lr.ts:'')+' — pulsa EJECUTAR para recalcular', true);
+    }
+  }catch(e){console.error('loadLast:',e);}
+}
+function renderChips(){
+  const core=[],sat=[],ext=[];
+  Object.keys(UNIV).forEach(t=>{const a=UNIV[t];(a.ext?ext:(a.core?core:sat)).push(t);});
+  const chip=(t,cls,rmFn)=>{
+    const a=UNIV[t];const on=a.default?'active':'';
+    const rm=rmFn?`<span class="x" title="quitar" onclick="event.stopPropagation();${rmFn}('${t}')">×</span>`:'';
+    return `<button class="chip ${on} ${cls}" data-t="${t}" title="${a.clase||''}" onclick="this.classList.toggle('active')">${t}${rm}</button>`;
+  };
+  document.getElementById('chips-core').innerHTML=core.map(t=>chip(t,'',null)).join('');
+  document.getElementById('chips-sat').innerHTML=sat.map(t=>chip(t,'sat',UNIV[t].core?null:'removeTicker')).join('');
+  document.getElementById('chips-ext').innerHTML=ext.map(t=>chip(t,'ext','removeExternal')).join('');
+}
+function renderCacheBadge(){
+  const c=STATE.cache,el=document.getElementById('cache-badge');
+  if(!c||!c.date){el.className='badge badge-none';el.textContent='sin cache · se descargará de IBKR';return;}
+  if(c.fresh){el.className='badge badge-ok';el.textContent=c.date+' (hoy) · '+c.rows+' meses';}
+  else{el.className='badge badge-stale';el.textContent=c.date+' (caducado) · refrescar';}
+}
+function selectedTickers(){return [...document.querySelectorAll('.chip.active')].map(c=>c.dataset.t).filter(Boolean);}
+
+/* ── Optimizar ─────────────────────────────────────────────────── */
+async function optimize(){
+  const tk=selectedTickers();
+  if(tk.length<2){toast('Selecciona al menos 2 activos.');return;}
+  const nsim=parseInt(document.getElementById('nsim').value)||null;
+  const wmaxv=parseFloat(document.getElementById('wmax').value)||null;
+  document.getElementById('btn-run').disabled=true;
+  overlay(true,'Optimizando…','Descarga (si hace falta) + resampling + walk-forward OOS · puede tardar 1-3 min');
+  try{
+    const r=await fetch('/api/optimize',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({tickers:tk,config:{N_sim:nsim,w_max:wmaxv?wmaxv/100:null}})});
+    const d=await r.json();
+    if(!r.ok){toast('Error: '+(d.error||r.status));return;}
+    FD=d.frontier;OOS=d.oos;ASSETS=d.assets;
+    SURF=d.surface||[]; MVOREF=d.mvo_ref||{}; META=d.meta||{}; DSRB=d.dsr||{};
+    selPt=FD.findIndex(p=>p.max_sr);if(selPt<0)selPt=0;
+    document.getElementById('welcome').style.display='none';
+    document.getElementById('dash').style.display='block';
+    renderAll();
+    if(d.data_info)STATE.cache.date=d.data_info.date,STATE.cache.fresh=!d.data_info.stale,renderCacheBadge();
+    let msg='Optimización OK · '+ASSETS.length+' activos · T='+d.meta.T+' meses';
+    if(d.meta.excluded&&d.meta.excluded.length)msg+=' · excluidos: '+d.meta.excluded.join(',');
+    if(d.data_info&&d.data_info.stale)msg+=' · ⚠ datos no actualizados (IBKR no disponible)';
+    toast(msg,true);
+  }catch(e){toast('Fallo de red: '+e);}
+  finally{overlay(false);document.getElementById('btn-run').disabled=false;}
+}
+
+async function exportPdf(){
+  if(!FD.length){toast('No hay resultado que exportar — ejecuta una optimización primero.');return;}
+  document.getElementById('btn-pdf').disabled=true;
+  overlay(true,'Generando PDF…','Renderizando el informe con Edge headless (~10-20 s)');
+  try{
+    const r=await fetch('/api/export_pdf',{method:'POST'});
+    const d=await r.json();
+    if(!r.ok){toast('Error: '+(d.error||r.status));return;}
+    toast('Informe guardado: '+d.pdf+(d.html?' (+ HTML interactivo)':''),true);
+  }catch(e){toast('Fallo de red: '+e);}
+  finally{overlay(false);document.getElementById('btn-pdf').disabled=false;}
+}
+
+async function refresh(){
+  document.getElementById('btn-refresh').disabled=true;
+  overlay(true,'Refrescando datos desde IBKR…','Descargando todo el universo (TWS debe estar abierto)');
+  try{
+    const r=await fetch('/api/refresh',{method:'POST'});const d=await r.json();
+    if(!r.ok){toast('Error: '+(d.error||r.status));}
+    else{await loadState();toast('Datos actualizados · '+d.rows+' meses · '+d.tickers.length+' activos',true);}
+  }catch(e){toast('Fallo: '+e);}
+  finally{overlay(false);document.getElementById('btn-refresh').disabled=false;}
+}
+
+/* ── Añadir / quitar tickers ───────────────────────────────────── */
+function openModal(){document.getElementById('modal').className='modal show';}
+function closeModal(){document.getElementById('modal').className='modal';}
+async function doSearch(){
+  const q=document.getElementById('searchq').value.trim();if(!q)return;
+  const box=document.getElementById('searchres');box.innerHTML='<div class="meta">Buscando…</div>';
+  try{
+    const r=await fetch('/api/search?q='+encodeURIComponent(q));const d=await r.json();
+    if(!r.ok){box.innerHTML='<div class="meta" style="color:#e8503a">'+(d.error||'Error')+'</div>';return;}
+    if(!d.results.length){box.innerHTML='<div class="meta">Sin resultados.</div>';return;}
+    box.innerHTML=d.results.map(x=>`<div class="sres-row">
+      <div><b>${x.symbol}</b> <span class="nm">${x.name||''} · ${x.exchange} · ${x.currency} · ${x.secType}</span></div>
+      <button class="btn" onclick='addTicker(${JSON.stringify(x).replace(/'/g,"&#39;")})'>Añadir</button>
+    </div>`).join('');
+  }catch(e){box.innerHTML='<div class="meta" style="color:#e8503a">Fallo: '+e+'</div>';}
+}
+async function addTicker(x){
+  overlay(true,'Añadiendo '+x.symbol+'…','Descargando histórico desde IBKR');
+  try{
+    const r=await fetch('/api/add_ticker',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({symbol:x.symbol,conId:x.conId,exchange:x.exchange,currency:x.currency,clase:x.name||''})});
+    const d=await r.json();
+    if(!r.ok){toast('Error: '+(d.error||r.status));}
+    else{await loadState();closeModal();toast(x.symbol+' añadido al universo',true);}
+  }catch(e){toast('Fallo: '+e);}
+  finally{overlay(false);}
+}
+async function uploadXls(inp){
+  const f=inp.files[0];if(!f)return;inp.value='';
+  overlay(true,'Cargando '+f.name+'…','Interpretando fechas y retornos/VL · conversión a mensual');
+  const prevSel=selectedTickers();          // loadState resetea los chips: se preserva
+  try{
+    const fd=new FormData();fd.append('file',f);
+    const r=await fetch('/api/upload_xls',{method:'POST',body:fd});
+    const d=await r.json();
+    if(!r.ok){toast('Error: '+(d.error||r.status));return;}
+    await loadState();
+    // Restaurar la selección previa y dejar ACTIVOS los fondos recién cargados
+    // (la confirmación visual de que el archivo entró bien).
+    const names=Object.keys(d.funds||{});
+    const want=new Set([...prevSel,...names]);
+    document.querySelectorAll('.chip').forEach(c=>{if(c.dataset.t)c.classList.toggle('active',want.has(c.dataset.t));});
+    const det=names.map(n=>n+' ('+d.funds[n].kind+', '+d.funds[n].n_meses+'m)').join(' · ');
+    toast('Cargados y seleccionados '+names.length+' fondos: '+det,true);
+  }catch(e){toast('Fallo: '+e);}
+  finally{overlay(false);}
+}
+async function removeExternal(t){
+  if(!confirm('¿Quitar '+t+' (fondo XLS)?'))return;
+  const r=await fetch('/api/remove_external',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:t})});
+  const d=await r.json();
+  if(!r.ok){toast('Error: '+(d.error||r.status));}else{await loadState();toast(t+' eliminado',true);}
+}
+async function removeTicker(t){
+  if(!confirm('¿Quitar '+t+' del universo?'))return;
+  const r=await fetch('/api/remove',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({symbol:t})});
+  const d=await r.json();
+  if(!r.ok){toast('Error: '+(d.error||r.status));}else{await loadState();toast(t+' eliminado',true);}
+}
+
+/* ── Render (reutilizado del dashboard original) ───────────────── */
+function showTab(n,btn){
+  currentTab=n;
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('v-'+n).classList.add('active');
+  if(btn)btn.classList.add('active');
+  if(!FD.length)return;
+  if(n==='comp')renderComp();
+  if(n==='oos')renderOOS();
+  if(n==='stats')renderStats();
+}
+function renderAll(){
+  renderIS();buildPtSel();
+  if(currentTab==='comp')renderComp();
+  if(currentTab==='oos')renderOOS();
+  if(currentTab==='stats')renderStats();
+}
+
+function renderIS(){
+  const opt=FD[0]||{};
+  const optS=SURF.find(s=>s.opt)||{};
+  const capOff=META.rc_star==null;
+  const N=META.N||ASSETS.length;
+  const noWmax=META.w_max!=null&&META.w_max>=0.999;
+  const wmaxStr=noWmax
+    ?'<b style="color:#d29922">SIN límite de peso (ablation)</b>'
+    :`w_max=${META.w_max!=null?(META.w_max*100).toFixed(0)+'%':'—'}`;
+  const rcStr=capOff
+    ?'<b style="color:#d29922">SIN cap %RC (ablation)</b>'
+    :`rc*=${fmt(META.rc_star,2)} (cap ${N?(100*META.rc_star/N).toFixed(1)+'% por activo, N='+N:'—'})`;
+  document.getElementById('is-meta').innerHTML=
+    `<b style="color:#e8503a">MEP_optim</b> · RQE ${opt.rqe_norm!=null?(opt.rqe_norm*100).toFixed(0):'—'}% del máx · `+
+    `Sharpe ${fmt(opt.sr,3)} · concentración máx ${optS.maxrc!=null?fmt(optS.maxrc):'—'}% · `+
+    `${wmaxStr} · tolerancia óptima: δS*=${fmt(META.ds_star,3)} · ${rcStr} · `+
+    `superficie ${SURF.length} QEPs (${META.n_pareto||0} en frente de Pareto)`;
+  const st=document.getElementById('surf-title');
+  if(st)st.textContent=capOff
+    ?'Curva de soluciones QEP — sin cap %RC (ablation): solo δS · altura = concentración resultante · ★ óptimo (δS*)'
+    :'Superficie de soluciones QEP — RQE sobre las tolerancias (δS × cap RC) · ★ óptimo (δS*, rc*)';
+
+  const _scene=(xt,yt,zt,xr,yr,zr)=>({
+    xaxis:{title:xt,range:xr,color:'#8b949e',gridcolor:'#21262d',backgroundcolor:'#0d1117',showbackground:true,zerolinecolor:'#30363d'},
+    yaxis:{title:yt,range:yr,color:'#8b949e',gridcolor:'#21262d',backgroundcolor:'#0d1117',showbackground:true,zerolinecolor:'#30363d'},
+    zaxis:{title:zt,range:zr,color:'#8b949e',gridcolor:'#21262d',backgroundcolor:'#0d1117',showbackground:true,zerolinecolor:'#30363d'},
+    camera:{eye:{x:1.6,y:-1.6,z:0.9}}});
+  const _rng=(a,p=0.10)=>{a=a.filter(v=>v!=null&&!isNaN(v));if(!a.length)return undefined;
+    const lo=Math.min(...a),hi=Math.max(...a),m=(hi-lo)*p||Math.abs(hi)*0.05||0.01;return [lo-m,hi+m];};
+  const _lay=(sc)=>({paper_bgcolor:'#0d1117',plot_bgcolor:'#0d1117',font:{color:'#8b949e',family:'IBM Plex Mono,monospace'},
+    margin:{l:0,r:0,t:0,b:0},scene:sc,legend:{x:0,y:1},showlegend:true});
+  const _cfg={responsive:true,displayModeBar:false};
+
+  if(typeof Plotly==='undefined'){
+    ['p3d-pareto','p3d-surface'].forEach(id=>{var el=document.getElementById(id);
+      if(el)el.innerHTML='<div style="color:#8b949e;padding:40px;text-align:center">Gráfico 3D no disponible (Plotly no cargó — ¿sin conexión a internet?). El resto del dashboard funciona.</div>';});
+  }
+
+  // Gráfico 1 (3D) — FRENTE DE PARETO: los 3 objetivos como ejes.
+  //   x=Sharpe (↑ mejor) · y=concentración máx RC (↓ mejor) · z=RQE diversificación (↑ mejor)
+  if(window.Plotly) Plotly.react('p3d-pareto',[
+    {type:'scatter3d',mode:'markers',name:'QEP',
+     x:SURF.map(s=>s.sr),y:SURF.map(s=>s.maxrc),z:SURF.map(s=>s.rqe),
+     text:SURF.map(s=>`SR ${fmt(s.sr,3)} · concentr ${fmt(s.maxrc)}% · RQE ${fmt(s.rqe,4)}`),hoverinfo:'text',
+     marker:{size:3.5,color:SURF.map(s=>s.maxrc),colorscale:'Plasma',reversescale:true,
+       colorbar:{title:'conc.%',len:0.5,thickness:9,x:1.02},opacity:0.35}},
+    {type:'scatter3d',mode:'markers+text',name:'MEP_optim',x:[optS.sr],y:[optS.maxrc],z:[optS.rqe],
+     text:['  MEP_optim'],textposition:'top center',textfont:{color:'#e8503a',size:13},
+     marker:{size:7,color:'#e8503a',symbol:'diamond',line:{width:0.5,color:'#fff'}}},
+    {type:'scatter3d',mode:'markers+text',name:'MVO',x:[MVOREF.sr],y:[MVOREF.maxrc],z:[MVOREF.rqe],
+     text:['  MVO'],textposition:'top center',textfont:{color:'#58a6ff',size:13},
+     marker:{size:7,color:'#58a6ff',symbol:'circle',line:{width:0.5,color:'#fff'}}},
+  ],_lay(_scene('Sharpe →','← concentración máx RC (%)','RQE (diversificación) →',
+     _rng([...SURF.map(s=>s.sr),MVOREF.sr,optS.sr]),
+     _rng([...SURF.map(s=>s.maxrc),MVOREF.maxrc,optS.maxrc]),
+     _rng([...SURF.map(s=>s.rqe),MVOREF.rqe,optS.rqe]))),_cfg);
+
+  // Gráfico 2 (3D) — SUPERFICIE DE SOLUCIONES QEP (Fig. 8 del paper):
+  //   altura z=RQE alcanzado según los dos mandos de tolerancia x=δS, y=cap RC.
+  //   Sin cap %RC (ablation) el eje rc no existe: y = concentración RESULTANTE
+  //   (máx RC alcanzado), que muestra cómo se autorregula el MEP.
+  const yv=capOff?(s=>s.maxrc):(s=>s.rc);
+  const yTitle=capOff?'concentración máx RC (%) →':'cap RC (rc_k) →';
+  const rcTxt=s=>capOff?`máxRC ${fmt(s.maxrc)}%`:`rc ${fmt(s.rc,2)}`;
+  if(window.Plotly) Plotly.react('p3d-surface',[
+    {type:'scatter3d',mode:'markers',name:'QEP',
+     x:SURF.map(s=>s.ds),y:SURF.map(yv),z:SURF.map(s=>s.rqe),
+     text:SURF.map(s=>`δS ${fmt(s.ds,3)} · ${rcTxt(s)} · RQE ${fmt(s.rqe,4)}`),hoverinfo:'text',
+     marker:{size:5,color:SURF.map(s=>s.rqe),colorscale:'Viridis',colorbar:{title:'RQE',len:0.6,thickness:10}}},
+    {type:'scatter3d',mode:'markers+text',name:capOff?'óptimo (δS*)':'óptimo (δS*,rc*)',
+     x:[optS.ds],y:[yv(optS)],z:[optS.rqe],
+     text:['  óptimo'],textposition:'top center',textfont:{color:'#e8503a',size:13},
+     marker:{size:7,color:'#e8503a',symbol:'diamond',line:{width:0.5,color:'#fff'}}},
+  ],_lay(_scene('δS (tolerancia Sharpe) →',yTitle,'RQE →')),_cfg);
+
+  // Tabla — fila única MEP_optim
+  document.getElementById('tb-frontera').innerHTML=FD.map(p=>`<tr>
+    <td>★ <b>MEP_optim</b></td><td>${fmt(p.vol)}</td><td>${fmt(p.ret)}</td>
+    <td class="${p.sr>1?'pos':'neu'}">${fmt(p.sr,3)}</td><td>${fmt(p.rqe,4)}</td><td>${fmt(p.dr,3)}</td>
+    <td class="${p.cost_sr>=0?'pos':'neg'}">${fmtP(p.cost_sr)}</td>
+    <td class="${p.fb>20?'neg':p.fb>5?'neu':'pos'}">${fmt(p.fb,1)}</td><td>${fmt(p.ds,4)}</td>
+  </tr>`).join('');
+}
+
+function buildPtSel(){
+  document.getElementById('pt-sel').innerHTML=FD.map((p,i)=>`<button class="pt-btn ${i===selPt?'active':''}" onclick="selK(${i},this)">★ MEP_optim</button>`).join('');
+}
+function selK(i,btn){selPt=i;document.querySelectorAll('.pt-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderComp();}
+
+function renderComp(){
+  const pt=FD[selPt];
+  const rows=ASSETS.map((a,i)=>({a,c:COLORS[i%COLORS.length],w:pt.weights[a],i5:pt.ic5[a],i95:pt.ic95[a],rc:pt.rc[a]})).sort((x,y)=>y.w-x.w);
+  const lim=2/ASSETS.length*100;
+  const maxW=Math.max(...rows.map(r=>r.w),1);
+  const nAct=rows.filter(r=>r.w>0.05).length;
+  const rcMax=Math.max(...rows.map(r=>r.rc));
+  const rcMaxA=rows.find(r=>r.rc===rcMax).a;
+  const robustos=rows.filter(r=>(r.i95-r.i5)<10).length;
+  document.getElementById('comp-summary').innerHTML=[
+    ['ACTIVOS CON PESO',nAct+' / '+ASSETS.length,'#e6edf3'],
+    ['RETORNO / VOL',fmt(pt.ret)+'% / '+fmt(pt.vol)+'%','#7cb342'],
+    ['RQE',fmt(pt.rqe,4)+(pt.rqe_norm!=null?' ('+(pt.rqe_norm*100).toFixed(0)+'%)':''),'#a371f7'],
+    ['MAYOR %RC',rcMaxA+' '+fmt(rcMax)+'%','#d98b2b'],
+    ['PESOS ROBUSTOS',robustos+' / '+ASSETS.length,'#1f6feb'],
+  ].map(([l,v,c])=>`<div class="cs-card"><div class="cs-label">${l}</div><div class="cs-val" style="color:${c}">${v}</div></div>`).join('');
+  document.getElementById('comp-cards').innerHTML=rows.map(r=>{
+    const rng=r.i95-r.i5;
+    const estab=rng<10?['ROBUSTO','sem-r']:rng<20?['MODERADO','sem-m']:['INCIERTO','sem-i'];
+    const wpct=(r.w/maxW*100);
+    const icL=(r.i5/maxW*100),icW=((r.i95-r.i5)/maxW*100);
+    const rcFlag=r.rc>lim?'#e8503a':'#7cb342';
+    return `<div class="afila">
+      <div class="adot" style="background:${r.c}"></div>
+      <div class="aname"><div class="atkr">${r.a}</div></div>
+      <div class="abar-wrap"><div class="abar-track">
+        <div class="abar-ic" style="left:${icL}%;width:${icW}%"></div>
+        <div class="abar-fill" style="width:${wpct}%;background:${r.c}"></div>
+      </div></div>
+      <div class="aweight"><span class="aw-big">${fmt(r.w)}%</span><br><span class="aw-ic">IC ${fmt(r.i5)}–${fmt(r.i95)}</span></div>
+      <div class="arc"><span class="arc-val" style="color:${rcFlag}">${fmt(r.rc)}%</span><br><span class="arc-lbl">riesgo</span></div>
+      <div class="aestab"><span class="semaforo ${estab[1]}"><span class="sem-dot" style="background:currentColor"></span>${estab[0]}</span></div>
+    </div>`;
+  }).join('');
+  // Composición del MVO de referencia, debajo de la MEP (payloads nuevos)
+  const cardMvo=document.getElementById('card-mvo');
+  if(MVOREF&&MVOREF.weights){
+    cardMvo.style.display='';
+    const mrows=ASSETS.map((a,i)=>({a,c:COLORS[i%COLORS.length],wm:MVOREF.weights[a]||0,we:pt.weights[a]||0}))
+      .sort((x,y)=>y.wm-x.wm);
+    const maxM=Math.max(...mrows.map(r=>Math.max(r.wm,r.we)),1);
+    document.getElementById('comp-mvo').innerHTML=
+      `<div style="font-size:11px;color:#8b949e;margin-bottom:8px">Barra azul = MVO · marca roja = peso MEP del mismo activo. SR ${fmt(MVOREF.sr,3)} · RQE ${fmt(MVOREF.rqe,4)} · máx %RC ${fmt(MVOREF.maxrc)}%</div>`+
+      mrows.map(r=>`<div class="afila">
+        <div class="adot" style="background:${r.c}"></div>
+        <div class="aname"><div class="atkr">${r.a}</div></div>
+        <div class="abar-wrap"><div class="abar-track">
+          <div class="abar-fill" style="width:${r.wm/maxM*100}%;background:#1f6feb;opacity:.75"></div>
+          <div style="position:absolute;top:0;bottom:0;left:${r.we/maxM*100}%;width:2px;background:#e8503a"></div>
+        </div></div>
+        <div class="aweight"><span class="aw-big">${fmt(r.wm)}%</span><br><span class="aw-ic">MEP ${fmt(r.we)}%</span></div>
+      </div>`).join('');
+  } else cardMvo.style.display='none';
+  if(cRC)cRC.destroy();
+  cRC=new Chart(document.getElementById('cRC'),{
+    type:'doughnut',data:{labels:ASSETS,datasets:[{data:ASSETS.map(a=>pt.rc[a]),backgroundColor:ASSETS.map((a,i)=>COLORS[i%COLORS.length]),borderWidth:1,borderColor:'#0d1117'}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'right',labels:{color:'#8b949e',font:{size:10},generateLabels:ch=>ch.data.labels.map((l,i)=>({text:l+' '+fmt(ch.data.datasets[0].data[i])+'%',fillStyle:COLORS[i%COLORS.length],strokeStyle:COLORS[i%COLORS.length],fontColor:'#8b949e'}))}},tooltip:{callbacks:{label:d=>`${d.label}: ${fmt(d.raw)}% del riesgo`}}}
+    }
+  });
+}
+
+function renderOOS(){
+  const el=document.getElementById('oos-content');
+  if(!OOS||!OOS.dates){el.innerHTML='<div class="card" style="color:#8b949e;text-align:center;padding:40px">OOS no disponible (ventana T insuficiente para walk-forward).</div>';return;}
+  const m=OOS.metrics,jk=OOS.jk;
+  el.innerHTML=`<div class="oos-kpis">${['mep','mvo','ew'].map(k=>{
+    const mm=m[k],lbl={mep:'MEP',mvo:'MVO max-Sharpe',ew:'Equal Weight'}[k],c={mep:'#e8503a',mvo:'#1f6feb',ew:'#8b949e'}[k];
+    return `<div class="oos-card"><div class="oos-label" style="color:${c}">${lbl}</div>
+      <div class="oos-row"><span>Retorno anual</span><b class="${mm.ret>0?'pos':'neg'}">${fmtP(mm.ret)}</b></div>
+      <div class="oos-row"><span>Volatilidad</span><b>${fmt(mm.vol)}%</b></div>
+      <div class="oos-row"><span>Sharpe OOS</span><b class="${mm.sr>0.5?'pos':'neu'}">${fmt(mm.sr,3)}</b></div>
+      <div class="oos-row"><span>Max Drawdown</span><b class="neg">${fmt(mm.mdd)}%</b></div></div>`;
+  }).join('')}</div>
+  <div class="card"><div class="card-title">Rentabilidad mensual OOS — retorno de cada mes (%)</div>
+    <div style="overflow-x:auto"><div id="cOOS-wrap" style="position:relative;height:280px;min-width:700px"><canvas id="cOOS"></canvas></div></div></div>
+  <div class="card"><div class="card-title">Drawdown OOS — caída desde máximo</div>
+    <div style="overflow-x:auto"><div id="cDD-wrap" style="position:relative;height:240px;min-width:700px"><canvas id="cDD"></canvas></div></div></div>
+  <div class="jk-box"><strong>Test Jobson-Korkie (1981) — MEP vs MVO</strong><br>
+    H₀: SR_MEP=SR_MVO · Memmel (2003)<br>
+    SR_MEP=${fmt(jk.sr_mep,3)} · SR_MVO=${fmt(jk.sr_bench,3)} · z=${fmt(jk.z,3)} · p=${fmt(jk.pval,4)} ·
+    ${jk.sig?'<b class="pos">✓ Significativo (α=5%)</b>':'<span class="neu">✗ No significativo — consistente con robustez MEP (Bajo Traver §5)</span>'}
+  </div>
+  ${(DSRB&&DSRB.psr_oos!=null)?`<div class="jk-box"><strong>PSR — Probabilistic Sharpe Ratio OOS (Bailey &amp; López de Prado 2012)</strong><br>
+    P(Sharpe verdadero &gt; 0) corrigiendo muestra corta (T=${DSRB.T_oos}) y no-normalidad (asim.=${DSRB.skew_oos}, curt.=${DSRB.kurt_oos})<br>
+    PSR(0)=<b class="${DSRB.psr_oos>=0.95?'pos':'neg'}">${(DSRB.psr_oos*100).toFixed(1)}%</b> ·
+    ${DSRB.psr_oos>=0.95?'<b class="pos">✓ Sharpe OOS real (&gt;0,95)</b>':'<span class="neu">✗ &lt;0,95</span>'}
+    <span class="neu"> — sin deflación: el walk-forward ya limpia la selección. Deflación (DSR) en pestaña Estadísticos.</span>
+  </div>`:''}
+  ${OOS.corr?`<div class="card"><div class="card-title">Correlación de retornos OOS entre estrategias${OOS.corr.labels.length>3?` (+ mercado: ${OOS.corr.labels[3]})`:''}</div>
+    <div style="overflow-x:auto"><table><thead><tr><th></th>${OOS.corr.labels.map(l=>`<th>${l}</th>`).join('')}</tr></thead>
+    <tbody>${OOS.corr.matrix.map((row,i)=>`<tr><td><b>${OOS.corr.labels[i]}</b></td>${row.map((v,j)=>`<td class="${i!==j&&v>0.95?'neu':''}">${fmt(v,3)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>
+    <div class="meta" style="margin-top:8px;color:#8b949e">Correlaciones altas: las tres estrategias invierten en los mismos 8 activos. La ρ(MEP,MVO) es la que corrige el test de Jobson-Korkie (por eso no se usa un test simple); estar por debajo de 1 confirma que el MEP es una cartera distinta del MVO.${OOS.corr.labels.length>3?` La columna ${OOS.corr.labels[3]} (S&amp;P 500) mide la exposición a mercado de cada cartera: cuanto más baja la ρ, más aporta la diversificación (oro y renta fija) frente a una cartera pura de renta variable.`:''}</div></div>`:''}`;
+  // Nº de meses = longitud del NAV (robusto aunque no vengan fechas mensuales)
+  const _N=(OOS.nav_mep||[]).length;
+  let _labfmt=[];
+  if(OOS.dates_m){ _labfmt=OOS.dates_m.map(s=>String(s).slice(0,7)); }
+  else if(OOS.dates){
+    // Cada fecha de paso es el 1.er mes de un bloque de 3; expandimos con aritmética
+    // entera año/mes (NO Date.setMonth: en un día 31 se desborda y salta/duplica meses).
+    for(const ds of OOS.dates){
+      const p=String(ds).split('-'); const Y=+p[0], M=+p[1];  // M = 1..12
+      for(let k=0;k<3&&_labfmt.length<_N;k++){
+        const mi=M-1+k, yy=Y+Math.floor(mi/12), mm=(mi%12)+1;
+        _labfmt.push(yy+'-'+String(mm).padStart(2,'0'));
+      }
+    }
+  }
+  while(_labfmt.length<_N) _labfmt.push('m'+(_labfmt.length+1));
+  _labfmt=_labfmt.slice(0,_N);
+  // ancho proporcional al nº de meses → un hueco por mes (scroll lateral)
+  // en modo impresión no hay scroll: ancho de página y etiquetas con autoSkip
+  const _prn=document.body.classList.contains('print');
+  const _wpx=_prn?'100%':Math.max(760,_N*36)+'px';
+  ['cOOS-wrap','cDD-wrap'].forEach(id=>{const w=document.getElementById(id);if(w)w.style.width=_wpx;});
+  // Retorno de CADA mes (%), todos los meses del OOS
+  const _mret=nav=>{const b=[100,...nav];let o=[];for(let i=1;i<b.length;i++)o.push((b[i]/b[i-1]-1)*100);return o;};
+  if(cOOS)cOOS.destroy();
+  cOOS=new Chart(document.getElementById('cOOS'),{
+    type:'line',data:{labels:_labfmt,datasets:[
+      {label:'MEP',data:_mret(OOS.nav_mep),borderColor:'#e8503a',borderWidth:2,pointRadius:0,tension:0.15},
+      {label:'MVO',data:_mret(OOS.nav_mvo),borderColor:'#1f6feb',borderWidth:1.4,pointRadius:0,tension:0.15},
+      {label:'EW',data:_mret(OOS.nav_ew),borderColor:'#6e7681',borderWidth:1,pointRadius:0,tension:0.15},
+      ...(OOS.nav_bench?[{label:(OOS.bench_label||'S&P 500'),data:_mret(OOS.nav_bench),borderColor:'#2ea043',borderWidth:1.2,pointRadius:0,tension:0.15,borderDash:[5,3]}]:[]),
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'#8b949e'}},tooltip:{callbacks:{label:d=>d.dataset.label+': '+fmt(d.raw)+'%'}}},
+      scales:{x:{ticks:{color:'#8b949e',autoSkip:_prn,maxRotation:70,minRotation:70,font:{size:9}},grid:{color:'#21262d'}},
+              y:{title:{display:true,text:'retorno mensual %',color:'#8b949e'},ticks:{color:'#8b949e',callback:v=>v+'%'},grid:{color:'#21262d'}}}
+    }
+  });
+  // Drawdown: caída desde el máximo acumulado (base inicial 100)
+  const _dd=nav=>{let pk=100,o=[];for(const v of nav){pk=Math.max(pk,v);o.push((v/pk-1)*100);}return o;};
+  if(cDD)cDD.destroy();
+  cDD=new Chart(document.getElementById('cDD'),{
+    type:'line',data:{labels:_labfmt,datasets:[
+      {label:'MEP',data:_dd(OOS.nav_mep),borderColor:'#e8503a',borderWidth:2,pointRadius:0,fill:true,backgroundColor:'#e8503a22',tension:0.2},
+      {label:'MVO',data:_dd(OOS.nav_mvo),borderColor:'#1f6feb',borderWidth:1.5,pointRadius:0,fill:false,tension:0.2,borderDash:[4,3]},
+      {label:'EW',data:_dd(OOS.nav_ew),borderColor:'#6e7681',borderWidth:1,pointRadius:0,fill:false,tension:0.2,borderDash:[2,4]},
+      ...(OOS.nav_bench?[{label:(OOS.bench_label||'S&P 500'),data:_dd(OOS.nav_bench),borderColor:'#2ea043',borderWidth:1.2,pointRadius:0,fill:false,tension:0.2,borderDash:[5,3]}]:[]),
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'#8b949e'}}},
+      scales:{x:{ticks:{color:'#8b949e',autoSkip:_prn,maxRotation:70,minRotation:70,font:{size:9}},grid:{color:'#21262d'}},y:{title:{display:true,text:'caída desde máx %',color:'#8b949e'},ticks:{color:'#8b949e',callback:v=>v+'%'},grid:{color:'#21262d'}}}
+    }
+  });
+}
+
+function renderStats(){
+  const p=FD[0]||{};
+  let rows=`<tr><td><b>MEP_optim (IS)</b></td><td>${fmt(p.ret)}</td><td>${fmt(p.vol)}</td>`+
+    `<td class="${p.sr>1?'pos':''}">${fmt(p.sr,3)}</td>`+
+    `<td>${fmt(p.rqe,4)}${p.rqe_norm!=null?' ('+(p.rqe_norm*100).toFixed(0)+'%)':''}</td><td>—</td></tr>`;
+  if(OOS&&OOS.metrics){
+    const lbl={mep:'MEP (OOS)',mvo:'MVO (OOS)',ew:'EW (OOS)'};
+    rows+=['mep','mvo','ew'].map(k=>{const m=OOS.metrics[k];
+      return `<tr><td>${lbl[k]}</td><td>${fmt(m.ret)}</td><td>${fmt(m.vol)}</td>`+
+        `<td class="${m.sr>0.5?'pos':''}">${fmt(m.sr,3)}</td><td>—</td><td class="neg">${fmt(m.mdd)}</td></tr>`;}).join('');
+  }
+  document.getElementById('tb-stats').innerHTML=rows;
+  const M=META||{};
+  document.getElementById('tb-params').innerHTML=[
+    ['N_sim',M.N_sim||'—'],['SBB block',(M.block||'—')+'m'],
+    ['w_max',M.w_max!=null?(M.w_max>=0.999?'<b style="color:#d29922">SIN LÍMITE de peso (ablation)</b>':(M.w_max*100).toFixed(0)+'%'):'—'],
+    ['δS* (elegido)',fmt(M.ds_star,3)],
+    ['cap %RC',M.rc_star==null
+      ?'<b style="color:#d29922">SIN CAP (ablation)</b>'
+      :`rc_k*=${fmt(M.rc_star,2)} → ${M.N?(100*M.rc_star/M.N).toFixed(1)+'% por activo (N='+M.N+')':'—'}`],
+    ['superficie QEP',(M.n_surface||'—')+' carteras'],['frente de Pareto',(M.n_pareto||'—')],
+    ['rf (€STR)',M.rf!=null?(M.rf*100).toFixed(2)+'%':'—'],['OOS train',(M.oos_train||'—')+'m'],
+  ].map(([k,v])=>`<tr><td style="color:#8b949e">${k}</td><td>${v}</td></tr>`).join('');
+  try{ renderDSR(); }
+  catch(err){
+    console.error('renderDSR error:',err);
+    const el=document.getElementById('dsr-note');
+    if(el)el.innerHTML='<b style="color:#f85149">⚠ Error pintando DSR:</b> '+(err&&err.message?err.message:err)+
+      '<br><span style="color:#8b949e">'+(err&&err.stack?String(err.stack).split('\n').slice(0,3).join(' · '):'')+'</span>';
+  }
+}
+
+/* ── Robustez estadística: PSR / DSR (Bailey & López de Prado 2014) ───────── */
+function renderDSR(){
+  const D=DSRB||{};
+  const kpisEl=document.getElementById('dsr-kpis');
+  const detEl=document.getElementById('dsr-detail');
+  const noteEl=document.getElementById('dsr-note');
+  const chartsEl=document.getElementById('dsr-charts');
+  if(!kpisEl) return;
+  if(!D || D.N==null || (D.psr_oos==null && D.dsr_is==null)){
+    kpisEl.innerHTML='';
+    detEl.innerHTML='<div style="color:#8b949e;padding:20px;text-align:center">Robustez PSR/DSR no disponible (ejecuta una optimización con OOS).</div>';
+    noteEl.innerHTML=''; if(chartsEl)chartsEl.style.display='none';
+    if(cDSR1){cDSR1.destroy();cDSR1=null;}
+    return;
+  }
+  const TH=D.threshold||0.95;
+  const pct=v=>v==null?'—':(v*100).toFixed(1)+'%';
+  const cls=v=>v==null?'neu':(v>=TH?'pos':'neg');
+  // KPIs
+  const cards=[
+    {lbl:'PSR OOS',sub:'¿Sharpe OOS real? (umbral 0)',v:D.psr_oos,c:'#e8503a'},
+    {lbl:'DSR IS',sub:`selección deflactada (N=${D.N})`,v:D.dsr_is,c:'#1f6feb'},
+  ];
+  kpisEl.innerHTML=cards.map(k=>`<div class="oos-card"><div class="oos-label" style="color:${k.c}">${k.lbl}</div>
+    <div style="font-size:26px;font-weight:700;margin:2px 0" class="${cls(k.v)}">${pct(k.v)}</div>
+    <div class="oos-row"><span style="color:#8b949e">${k.sub}</span><b class="${cls(k.v)}">${k.v==null?'—':(k.v>=TH?'✓ >0,95':'✗ <0,95')}</b></div></div>`).join('');
+  // Detalle de inputs
+  const rows=[
+    ['N (carteras candidatas QEP)',D.N],
+    ['SD de los Sharpes de la rejilla',D.sd_grid_ann!=null?D.sd_grid_ann.toFixed(4)+' (anual)':'—'],
+    ['SR₀ — umbral deflactado (E[max])',D.sr0_ann!=null?D.sr0_ann.toFixed(3)+' (anual)':'—'],
+    ['Sharpe IS del MEP',D.sr_is_ann!=null?D.sr_is_ann.toFixed(3)+' (anual)':'—'],
+    ['Sharpe OOS del MEP',D.sr_oos_ann!=null?D.sr_oos_ann.toFixed(3)+' (anual)':'—'],
+    ['T in-sample / T OOS',(D.T_is||'—')+' / '+(D.T_oos||'—')+' meses'],
+    ['Asimetría IS / OOS',(D.skew_is!=null?D.skew_is:'—')+' / '+(D.skew_oos!=null?D.skew_oos:'—')],
+    ['Curtosis IS / OOS',(D.kurt_is!=null?D.kurt_is:'—')+' / '+(D.kurt_oos!=null?D.kurt_oos:'—')],
+  ];
+  detEl.innerHTML='<table style="margin-top:12px">'+rows.map(([k,v])=>
+    `<tr><td style="color:#8b949e">${k}</td><td>${v}</td></tr>`).join('')+'</table>';
+  noteEl.innerHTML='<b>Cómo leerlo:</b> PSR/DSR son probabilidades — bueno si <b>&gt; 0,95</b> (equivale a p &lt; 0,05). '+
+    'El <b>DSR IS</b> corrige el Sharpe por haber elegido entre '+D.N+' candidatas (Bailey &amp; López de Prado). '+
+    'El <b>PSR OOS</b> no deflacta porque el walk-forward ya neutraliza la selección.';
+  // Gráficos (Exhibit 2)
+  if(chartsEl)chartsEl.style.display='';
+  drawDSRCharts(D);
+}
+
+function drawDSRCharts(D){
+  if(!window.Chart) return;
+  const c=D.curve; if(!c||!c.N||!c.N.length){
+    if(cDSR1){cDSR1.destroy();cDSR1=null;} return;}
+  const TH=D.threshold||0.95, nr=c.n_real||D.N;
+  const P1=c.N.map((n,i)=>({x:n,y:c.dsr[i]})).filter(p=>p.y!=null);
+  const xmin=Math.min(...c.N), xmax=Math.max(...c.N);
+  const grid='#21262d', tick='#8b949e';
+  const vLine=(ymin,ymax)=>({label:'N real',data:[{x:nr,y:ymin},{x:nr,y:ymax}],
+     borderColor:'#58a6ff',borderWidth:1.5,borderDash:[4,3],pointRadius:0,fill:false});
+  const baseX={type:'logarithmic',min:xmin,max:xmax,grid:{color:grid},
+     ticks:{color:tick,font:{size:10},callback:v=>[2,5,10,50,100,500,1000].includes(v)?v:''}};
+  const _cfg=(pts,color,ttl,extra,yopts)=>({type:'line',
+    data:{datasets:[{label:ttl,data:pts,borderColor:color,borderWidth:2,pointRadius:0,tension:0.25,fill:false},...extra]},
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'nearest',intersect:false},
+      plugins:{legend:{display:false},tooltip:{callbacks:{title:it=>'N = '+it[0].parsed.x,
+        label:it=>ttl+': '+it.parsed.y.toFixed(3)}}},
+      scales:{x:baseX,y:Object.assign({grid:{color:grid},ticks:{color:tick,font:{size:10}}},yopts)}}});
+  // Panel DSR + umbral 0,95
+  const ys=P1.map(p=>p.y), ymin=Math.min(...ys,TH)-0.01, ymax=Math.max(...ys,1)+0.005;
+  const thLine={label:'umbral 0,95',data:[{x:xmin,y:TH},{x:xmax,y:TH}],
+     borderColor:'#d29922',borderWidth:1.5,borderDash:[5,4],pointRadius:0,fill:false};
+  if(cDSR1)cDSR1.destroy();
+  cDSR1=new Chart(document.getElementById('cDSR1'),
+    _cfg(P1,'#e8503a','DSR',[thLine,vLine(ymin,ymax)],{min:ymin,max:ymax}));
+}
+
+/* ── Modo impresión: el payload viene incrustado (window.__PRINT__), sin servidor ─ */
+function initPrint(){
+  const P=window.__PRINT__;
+  document.body.classList.add('print');
+  if(window.Chart)Chart.defaults.animation=false;
+  FD=P.frontier||[];OOS=P.oos||{};ASSETS=P.assets||[];
+  SURF=P.surface||[];MVOREF=P.mvo_ref||{};META=P.meta||{};DSRB=P.dsr||{};
+  selPt=FD.findIndex(p=>p.max_sr);if(selPt<0)selPt=0;
+  document.getElementById('welcome').style.display='none';
+  document.getElementById('dash').style.display='block';
+  document.getElementById('hdr-meta').innerHTML=
+    'Informe generado: '+(P.ts||'—')+'<br>'+(P.tickers||[]).join(' · ');
+  document.querySelectorAll('#dash .view').forEach(v=>v.classList.add('active'));
+  renderIS();renderComp();renderOOS();renderStats();
+}
+if(window.__PRINT__){initPrint();}else{loadState();}
+</script>
+</body>
+</html>

@@ -1,0 +1,35 @@
+Copyright (c) 2026 Carles Aznar Carrique (MFIA)
+
+All rights reserved.
+
+This repository and its contents (the "Software") are made publicly available
+solely for viewing, evaluation, and academic reference in connection with the
+author's Master's thesis (TFM) and professional portfolio.
+
+No permission is granted to any person to use, copy, modify, merge, publish,
+distribute, sublicense, or sell copies of the Software, in whole or in part, nor
+to create derivative works based upon it, without the prior written consent of
+the copyright holder.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHOR BE
+LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+NO INVESTMENT ADVICE. This Software is a quantitative research tool based on
+statistical and mathematical models. It is provided for academic, educational and
+informational purposes only and does NOT constitute investment advice, a personal
+recommendation, a solicitation, or an offer to buy or sell any financial instrument,
+nor a guarantee of any outcome. Simulated or historical performance is not indicative
+of future results; all investing involves risk, including the possible loss of
+principal. Any use of the Software or of the results it produces is made solely at the
+user's own risk and responsibility, and the author accepts no liability whatsoever for
+any investment decision, financial loss or damage arising from such use.
+
+Note on scope: The quantitative methods implemented herein are described in
+publicly available academic works by their respective authors (see the
+References section of the README). Those methods are not claimed as the property
+of the copyright holder; this notice concerns solely the original source code
+and its particular expression, which are the work of the author.
