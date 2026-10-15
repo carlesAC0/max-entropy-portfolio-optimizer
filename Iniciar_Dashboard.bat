@@ -1,12 +1,13 @@
 @echo off
 title Dashboard MEP-RQE
-cd /d "C:\Users\Usuario\Desktop\Optimizador de cartera"
+cd /d "%~dp0"
 echo ============================================================
 echo   Dashboard MEP-RQE
 echo   El navegador se abrira solo en unos segundos.
 echo   Para cerrar el servidor: cierra esta ventana o pulsa Ctrl+C.
 echo ============================================================
-start "" /min cmd /c "timeout /t 4 >nul & start http://127.0.0.1:5000"
+rem Abre el navegador solo cuando el puerto 5000 ya escucha
+start "" /min "C:\Users\Usuario\anaconda3\envs\mep_tfm\python.exe" _abrir_navegador.py
 "C:\Users\Usuario\anaconda3\envs\mep_tfm\python.exe" app.py
 echo.
 echo El servidor se ha detenido.

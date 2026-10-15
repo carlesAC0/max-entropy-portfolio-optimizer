@@ -84,6 +84,15 @@ td:first-child{text-align:left;color:#8b949e}
 .sem-m{background:rgba(217,139,43,0.15);color:#d98b2b}
 .sem-i{background:rgba(232,80,58,0.15);color:#e8503a}
 .sem-dot{width:6px;height:6px;border-radius:50%}
+/* ── Pestaña Paper vs Real ──────────────────────────────────────── */
+.cmp-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;padding:10px 14px;background:#161b22;border:1px solid #30363d;border-radius:8px;font-size:11px;color:#8b949e}
+.cmp-bar b{color:#e6edf3}
+.cmp-avisos{margin-bottom:14px;padding:10px 14px;background:rgba(217,139,43,0.08);border:1px solid rgba(217,139,43,0.35);border-radius:8px;font-size:11px;color:#d98b2b;line-height:1.7}
+.cmp-mk{position:absolute;top:50%;transform:translate(-50%,-50%);z-index:2}
+.cmp-tgt{position:absolute;top:0;bottom:0;width:2px;background:#e6edf3;z-index:1}
+.cmp-leg{display:flex;gap:16px;font-size:11px;color:#8b949e;margin-bottom:10px;flex-wrap:wrap}
+.cmp-vals{width:150px;text-align:right;flex-shrink:0;font-size:11px;line-height:1.5}
+body.print #v-cmp{display:none!important}
 /* ── Welcome / overlay / modal ──────────────────────────────────── */
 #welcome{padding:60px 28px;text-align:center;color:#8b949e}
 #welcome .big{font-size:20px;color:#e6edf3;margin-bottom:10px}
@@ -153,6 +162,7 @@ body.print #cOOS-wrap,body.print #cDD-wrap{min-width:0!important}
   <button class="tab" onclick="showTab('comp',this)">Composición</button>
   <button class="tab" onclick="showTab('oos',this)">Walk-Forward OOS</button>
   <button class="tab" onclick="showTab('stats',this)">Estadísticos</button>
+  <button class="tab" onclick="showTab('cmp',this)">Paper vs Real</button>
 </div>
 
 <div id="welcome">
@@ -203,6 +213,32 @@ body.print #cOOS-wrap,body.print #cDD-wrap{min-width:0!important}
     </div>
     <div class="meta" style="margin-top:8px;color:#8b949e">Fijado el Sharpe IS del MEP y la dispersión de la rejilla, se barre N (nº de carteras candidatas). Al crecer N sube el umbral por azar y baja el DSR. La línea vertical marca <b>nuestro N real</b>; la horizontal, el 0,95. Cuanto más a la derecha cruzaría el 0,95, más búsqueda toleraría el resultado sin dejar de ser significativo.</div>
   </div>
+</div>
+<div id="v-cmp" class="view" data-title="PAPER (RÉPLICA MEP) VS CARTERA REAL">
+  <div class="cmp-bar" id="cmp-bar">Cargando…</div>
+  <div class="cmp-avisos" id="cmp-avisos" style="display:none"></div>
+  <div class="card"><div class="card-title">Métricas desde el inicio de la réplica</div>
+    <div style="overflow-x:auto"><table><thead><tr>
+      <th>Cartera</th><th>Rent. acumulada</th><th>Rent. anualizada</th><th>Volatilidad</th><th>Sharpe</th><th>Calmar</th><th>Max DD</th><th>Tracking error</th>
+    </tr></thead><tbody id="cmp-tb"></tbody></table></div>
+    <div class="meta" id="cmp-tb-note" style="margin-top:8px;color:#8b949e"></div></div>
+  <div class="card"><div class="card-title">Rentabilidad acumulada (%)</div>
+    <div style="position:relative;height:280px"><canvas id="cCmpRet"></canvas></div></div>
+  <div class="card"><div class="card-title">Drawdown — caída desde máximo (%)</div>
+    <div style="position:relative;height:220px"><canvas id="cCmpDD"></canvas></div></div>
+  <div class="card"><div class="card-title">Pesos del núcleo frente a las bandas IC del modelo</div>
+    <div class="cmp-leg">
+      <span><span style="display:inline-block;width:2px;height:11px;background:#e6edf3;vertical-align:middle"></span> objetivo MEP</span>
+      <span><span style="display:inline-block;width:18px;height:9px;background:rgba(139,148,158,0.18);border:1px dashed #6e7681;vertical-align:middle"></span> banda IC 5–95%</span>
+      <span style="color:#e8503a">● paper</span><span style="color:#58a6ff">◆ real</span>
+    </div>
+    <div id="cmp-pesos"></div>
+    <div class="meta" id="cmp-pesos-note" style="margin-top:8px;color:#8b949e"></div></div>
+  <div class="card" id="cmp-sat-card" style="display:none"><div class="card-title">Satélites de la cartera real (fuera del núcleo del modelo)</div>
+    <div style="overflow-x:auto"><table><thead><tr><th>Activo</th><th>Peso sobre el total</th><th>Valor €</th></tr></thead><tbody id="cmp-sat"></tbody></table></div></div>
+  <div class="card"><div class="card-title">Deriva — distancia de los pesos del núcleo al objetivo (active share, %)</div>
+    <div style="position:relative;height:220px"><canvas id="cCmpAS"></canvas></div>
+    <div class="meta" style="margin-top:8px;color:#8b949e">Active share = ½·Σ|w − w<sub>objetivo</sub>|: 0% = idéntica al modelo; mide qué parte de la cartera habría que mover para volver al objetivo. Sirve para decidir cuándo rebalancear.</div></div>
 </div>
 </div>
 
@@ -407,7 +443,9 @@ function showTab(n,btn){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.getElementById('v-'+n).classList.add('active');
   if(btn)btn.classList.add('active');
-  if(!FD.length)return;
+  // Paper vs Real no depende de la optimización: se muestra aunque no haya resultado
+  if(n==='cmp'){document.getElementById('welcome').style.display='none';document.getElementById('dash').style.display='block';loadCmp();return;}
+  if(!FD.length){document.getElementById('dash').style.display='none';document.getElementById('welcome').style.display='';return;}
   if(n==='comp')renderComp();
   if(n==='oos')renderOOS();
   if(n==='stats')renderStats();
@@ -760,6 +798,112 @@ function drawDSRCharts(D){
   if(cDSR1)cDSR1.destroy();
   cDSR1=new Chart(document.getElementById('cDSR1'),
     _cfg(P1,'#e8503a','DSR',[thLine,vLine(ymin,ymax)],{min:ymin,max:ymax}));
+}
+
+/* ── Paper vs Real (comparador.py) ─────────────────────────────── */
+let CMP=null,cCmpRet=null,cCmpDD=null,cCmpAS=null;
+async function loadCmp(){
+  try{
+    const r=await fetch('/api/comparador');const d=await r.json();
+    if(!r.ok){document.getElementById('cmp-bar').textContent='Error: '+(d.error||r.status);return;}
+    CMP=d;renderCmp();
+  }catch(e){document.getElementById('cmp-bar').textContent='Fallo de red: '+e;}
+}
+async function updateCmp(){
+  const b=document.getElementById('btn-cmp');if(b)b.disabled=true;
+  overlay(true,'Leyendo cuentas y precios…','Solo lectura · paper (7497) y real (7496) si están abiertas · no envía órdenes');
+  try{
+    const r=await fetch('/api/comparador/actualizar',{method:'POST'});const d=await r.json();
+    if(!r.ok){toast('Error: '+(d.error||r.status));return;}
+    CMP=d;renderCmp();
+    const a=d.actualizacion||{};
+    const msg=['paper','real','precios'].map(k=>a[k]?(a[k].ok?'✓ ':'✗ ')+k+': '+a[k].msg:'').filter(Boolean).join(' · ');
+    toast(msg,['paper','real','precios'].every(k=>a[k]&&a[k].ok));
+  }catch(e){toast('Fallo de red: '+e);}
+  finally{overlay(false);if(b)b.disabled=false;}
+}
+async function resetCmp(){
+  if(!confirm('¿Reiniciar la comparación?\nLa fecha de inicio se recalculará con los activos del objetivo actual y se perderá la curva anterior.'))return;
+  try{
+    const r=await fetch('/api/comparador/reiniciar',{method:'POST'});const d=await r.json();
+    if(!r.ok){toast('Error: '+(d.error||r.status));return;}
+    CMP=d;renderCmp();toast('Inicio reiniciado: '+(d.inicio||'pendiente de réplica completa'),true);
+  }catch(e){toast('Fallo de red: '+e);}
+}
+function renderCmp(){
+  const d=CMP||{};const st=d.estado||{};
+  const est=(k,lbl)=>st[k]?`${lbl} <b>${st[k].account}</b> · foto ${st[k].ts.slice(0,16)} (${st[k].source||'—'})`:`${lbl} <b>sin foto</b>`;
+  document.getElementById('cmp-bar').innerHTML=
+    `${est('paper','Paper')} <span>│</span> ${est('real','Real')} <span>│</span> inicio réplica <b>${d.inicio||'—'}</b>`+
+    (d.objetivo?` <span>│</span> objetivo MEP <b>${d.objetivo.ts||'—'}</b>`:'')+
+    `<span style="flex:1"></span><button class="btn" id="btn-cmp" onclick="updateCmp()" title="Lee posiciones, ejecuciones y precios diarios. Solo lectura: nunca envía órdenes.">↻ Actualizar (solo lectura)</button>`+
+    `<button class="btn" onclick="resetCmp()" title="Vuelve a calcular la fecha de inicio con los activos del objetivo actual (p.ej. tras cambiar el universo).">⟲ Reiniciar comparación</button>`;
+  const av=document.getElementById('cmp-avisos');
+  av.style.display=(d.avisos&&d.avisos.length)?'':'none';
+  av.innerHTML=(d.avisos||[]).map(x=>'⚠ '+x).join('<br>');
+
+  // Métricas
+  const M=d.metricas;const p2=v=>v==null?'—':fmt(v)+'%';
+  const row=(lbl,c,m,te)=>`<tr><td><b style="color:${c}">${lbl}</b></td>
+    <td class="${m.cum>=0?'pos':'neg'}">${m.cum==null?'—':fmtP(m.cum)}</td>
+    <td>${m.ann==null?'—':fmtP(m.ann)}</td><td>${p2(m.vol)}</td>
+    <td>${m.sharpe==null?'—':fmt(m.sharpe,2)}</td><td>${m.calmar==null?'—':fmt(m.calmar,2)}</td>
+    <td class="neg">${p2(m.mdd)}</td><td>${te}</td></tr>`;
+  if(M){
+    const dc=(M.real.cum!=null&&M.paper.cum!=null)?M.real.cum-M.paper.cum:null;
+    document.getElementById('cmp-tb').innerHTML=
+      row('Paper (réplica MEP)','#e8503a',M.paper,'—')+
+      row('Real','#58a6ff',M.real,M.te==null?'—':fmt(M.te)+'%')+
+      `<tr><td>Real − Paper</td><td class="${dc>=0?'pos':'neg'}">${dc==null?'—':fmtP(dc)}</td><td colspan="6" style="text-align:left;color:#8b949e">diferencia de rentabilidad acumulada (puntos)</td></tr>`;
+    document.getElementById('cmp-tb-note').innerHTML=
+      `${M.paper.n||0} sesiones · rentabilidad sobre posiciones (sin efectivo ni aportaciones) · rf = €STR (XEON)${M.rf_ann!=null?' '+fmt(M.rf_ann)+'% anual':''} · `+
+      `anualizada, Sharpe y Calmar a partir de 20 sesiones · tracking error = volatilidad anualizada de (real − paper)`;
+  }else{
+    document.getElementById('cmp-tb').innerHTML='<tr><td colspan="8" style="text-align:center;color:#8b949e;padding:18px">Sin serie todavía</td></tr>';
+    document.getElementById('cmp-tb-note').innerHTML='';
+  }
+
+  // Gráficos
+  const S=d.series;
+  const lineCfg=(sets,ytxt)=>({type:'line',data:{labels:S?S.dates:[],datasets:sets},
+    options:{responsive:true,maintainAspectRatio:false,spanGaps:true,
+      plugins:{legend:{labels:{color:'#8b949e'}},tooltip:{callbacks:{label:x=>x.dataset.label+': '+fmt(x.raw)+'%'}}},
+      scales:{x:{ticks:{color:'#8b949e',font:{size:9},maxRotation:60,minRotation:60},grid:{color:'#21262d'}},
+              y:{title:{display:true,text:ytxt,color:'#8b949e'},ticks:{color:'#8b949e',callback:v=>v+'%'},grid:{color:'#21262d'}}}}});
+  const ds=(lbl,data,c,extra)=>Object.assign({label:lbl,data:data||[],borderColor:c,borderWidth:2,pointRadius:0,tension:0.15},extra||{});
+  if(cCmpRet)cCmpRet.destroy();if(cCmpDD)cCmpDD.destroy();if(cCmpAS)cCmpAS.destroy();
+  if(window.Chart){
+    cCmpRet=new Chart(document.getElementById('cCmpRet'),lineCfg([ds('Paper (réplica MEP)',S&&S.paper_cum,'#e8503a'),ds('Real',S&&S.real_cum,'#58a6ff')],'rentabilidad acumulada %'));
+    cCmpDD=new Chart(document.getElementById('cCmpDD'),lineCfg([ds('Paper',S&&S.paper_dd,'#e8503a',{fill:true,backgroundColor:'#e8503a22'}),ds('Real',S&&S.real_dd,'#58a6ff',{borderDash:[4,3]})],'caída desde máx %'));
+    cCmpAS=new Chart(document.getElementById('cCmpAS'),lineCfg([ds('Paper',S&&S.paper_as,'#e8503a'),ds('Real',S&&S.real_as,'#58a6ff')],'active share %'));
+  }
+
+  // Pesos vs bandas IC
+  const P=d.pesos||[];
+  const top=Math.max(25,...P.map(r=>Math.max(r.ic95||0,r.real||0,r.paper||0,r.modelo||0)))*1.05;
+  const x=v=>(v/top*100);
+  const sem=v=>v==null?'<span class="semaforo" style="color:#6e7681">sin dato</span>':
+    v?'<span class="semaforo sem-r"><span class="sem-dot" style="background:currentColor"></span>DENTRO IC</span>':
+      '<span class="semaforo sem-i"><span class="sem-dot" style="background:currentColor"></span>FUERA IC</span>';
+  document.getElementById('cmp-pesos').innerHTML=P.length?P.map(r=>`<div class="afila">
+      <div class="aname"><div class="atkr">${r.ticker}</div><div class="aclass">${r.ejec!==r.ticker?'ejec. '+r.ejec:''}</div></div>
+      <div class="abar-wrap"><div class="abar-track">
+        ${r.ic5!=null?`<div class="abar-ic" style="left:${x(r.ic5)}%;width:${x(r.ic95-r.ic5)}%"></div>`:''}
+        ${r.modelo!=null?`<div class="cmp-tgt" style="left:${x(r.modelo)}%"></div>`:''}
+        ${r.paper!=null?`<div class="cmp-mk" style="left:${x(r.paper)}%;color:#e8503a;font-size:14px">●</div>`:''}
+        ${r.real!=null?`<div class="cmp-mk" style="left:${x(r.real)}%;color:#58a6ff;font-size:15px">◆</div>`:''}
+      </div></div>
+      <div class="cmp-vals">obj <b>${fmt(r.modelo)}%</b> <span style="color:#6e7681">[${fmt(r.ic5,1)}–${fmt(r.ic95,1)}]</span><br>
+        <span style="color:#e8503a">paper ${r.paper==null?'—':fmt(r.paper)+'%'}</span> · <span style="color:#58a6ff">real ${r.real==null?'—':fmt(r.real)+'%'}</span></div>
+      <div class="aestab">${sem(r.real_dentro)}</div>
+    </div>`).join(''):'<div style="color:#8b949e;padding:14px">Sin resultado de optimización guardado (cache/last_result.json).</div>';
+  const nIn=P.filter(r=>r.real_dentro).length,nTot=P.filter(r=>r.real_dentro!=null).length;
+  document.getElementById('cmp-pesos-note').innerHTML=
+    (nTot?`<b>${nIn} / ${nTot}</b> pesos reales dentro de su banda IC — dentro de la banda, la diferencia con el modelo no es estadísticamente distinguible del ruido de estimación. `:'')+
+    `Pesos del núcleo normalizados a 100%${d.real_core_pct!=null?' (el núcleo es el '+fmt(d.real_core_pct,1)+'% de la cartera real)':''}. MTA/MTD se cuentan como sus proxies IBGS/IBGM. Semáforo = cartera real.`;
+  const sat=d.satelites||[];
+  document.getElementById('cmp-sat-card').style.display=sat.length?'':'none';
+  document.getElementById('cmp-sat').innerHTML=sat.map(s=>`<tr><td>${s.symbol}</td><td>${fmt(s.peso)}%</td><td>${s.valor.toLocaleString('es-ES',{maximumFractionDigits:0})}</td></tr>`).join('');
 }
 
 /* ── Modo impresión: el payload viene incrustado (window.__PRINT__), sin servidor ─ */

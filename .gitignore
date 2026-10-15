@@ -35,3 +35,7 @@ montecarlo_carteras.py
 stress_test_carteras.py
 generar_funcional.py
 generar_informe.py
+
+# Números de cuenta IBKR (datos personales). Plantilla pública: cuentas_ibkr.example.json
+cuentas_ibkr.json
+generar_plan_estrategias.py

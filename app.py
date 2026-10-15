@@ -16,6 +16,9 @@ Endpoints
     GET  /api/search?q=    busca símbolos en IBKR (TWS abierto)
     POST /api/add_ticker   {symbol,conId,exchange,currency,clase,core}
     POST /api/remove       {symbol}  (solo no-núcleo)
+    GET  /api/comparador   pestaña Paper vs Real (desde cache, sin IBKR)
+    POST /api/comparador/actualizar  foto de cuentas + precios diarios (solo lectura)
+    POST /api/comparador/reiniciar   borra el inicio fijado de la comparación
 
 Nota Windows: el pipeline usa multiprocessing; se desactiva el reloader de Flask
 para no duplicar el árbol de procesos.
@@ -293,6 +296,44 @@ def api_remove():
     except Exception as e:
         return jsonify({"error": str(e)}), 400
     return jsonify({"ok": True})
+
+
+# ── Pestaña "Paper vs Real" (comparador.py, solo lectura) ─────────────────────
+# Import dentro de cada ruta: si el comparador fallara, el resto del dashboard
+# sigue funcionando igual.
+
+@app.route("/api/comparador")
+def api_comparador():
+    try:
+        import comparador
+        return jsonify(comparador.calcular())
+    except Exception as e:
+        log.exception("Error en comparador")
+        return jsonify({"error": f"Comparador: {e}"}), 500
+
+
+@app.route("/api/comparador/actualizar", methods=["POST"])
+def api_comparador_actualizar():
+    try:
+        import comparador
+        estado = comparador.actualizar()
+        out = comparador.calcular()
+        out["actualizacion"] = estado
+        return jsonify(out)
+    except Exception as e:
+        log.exception("Error actualizando comparador")
+        return jsonify({"error": f"Comparador: {e}"}), 500
+
+
+@app.route("/api/comparador/reiniciar", methods=["POST"])
+def api_comparador_reiniciar():
+    try:
+        import comparador
+        comparador.reiniciar_inicio()
+        return jsonify(comparador.calcular())
+    except Exception as e:
+        log.exception("Error reiniciando comparador")
+        return jsonify({"error": f"Comparador: {e}"}), 500
 
 
 if __name__ == "__main__":
