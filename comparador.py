@@ -224,13 +224,16 @@ def _contratos(snaps, ex):
     return out
 
 
-def _qty_al_cierre(snaps_t, execs_t, dia):
+def _qty_al_cierre(snaps_t, execs_t, dia, solo_pasado=False):
     """Cantidades por conId al CIERRE del día `dia`.
     Se parte de la foto más cercana POSTERIOR y se deshacen las ejecuciones entre
-    el día y la foto; si no hay foto posterior, la anterior + ejecuciones."""
+    el día y la foto; si no hay foto posterior, la anterior + ejecuciones.
+    solo_pasado=True usa siempre la anterior + ejecuciones: no da por hecho nada
+    que no se haya visto ya ese día (si faltan ejecuciones, la foto posterior
+    adelantaría cambios que aún no habían ocurrido)."""
     fin = pd.Timestamp(dia) + pd.Timedelta(hours=23, minutes=59, seconds=59)
     ts = [pd.Timestamp(s["ts"]) for s in snaps_t]
-    post = [i for i, t in enumerate(ts) if t >= fin]
+    post = [] if solo_pasado else [i for i, t in enumerate(ts) if t >= fin]
     if post:
         s = snaps_t[post[0]]
         q = {p["conId"]: p["qty"] for p in s["positions"]}
@@ -382,7 +385,7 @@ def _inicio(snaps, ex):
     cands = sorted({pd.Timestamp(e["time"]).normalize() for e in et} |
                    {pd.Timestamp(s["ts"]).normalize() for s in st if s["positions"]})
     for d in cands:
-        q = _qty_al_cierre(st, et, d)
+        q = _qty_al_cierre(st, et, d, solo_pasado=True)   # réplica completa CONFIRMADA
         if req and req <= {cid_sym.get(str(c)) for c, v in q.items() if v > 0}:
             return d
     return None
